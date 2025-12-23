@@ -52,10 +52,14 @@ func main() {
 	// Metrics
 	r.Handle("/metrics", promhttp.Handler())
 
+	r.Method("GET", "/*", http.HandlerFunc(handler.ServeFileGet))
+	r.Method("HEAD", "/*", http.HandlerFunc(handler.ServeFileGet))
+	r.Method("OPTIONS", "/*", http.HandlerFunc(handler.ServeFileOptions))
+
+	// далее идут защиищенные функции
+	r.Use(handler.Auth)
 	// Upload
 	r.Post("/upload", handler.Upload)
-
-	r.Method("GET", "/*", http.HandlerFunc(handler.ServeFileOrMeta))
 
 	// Server
 	addr := ":" + port
