@@ -3,6 +3,7 @@
 #
 # IDE
 .vscode
+command
 
 # Binaries for programs and plugins
 *.exe
