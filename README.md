@@ -69,13 +69,6 @@ curl http://localhost:8080/metrics
 
 ## ⚙️ Configuration (Environment Variables)
 
-| Month    | Savings |
-| -------- | ------- |
-| January  | $250    |
-| February | $80     |
-| March    | $420    |
-
-
 | Variable | Required | Default | Description|
 | -------- | -------- | ------- | ---------- |
 | API_KEY  | ✅ Yes  |—         | API key for upload authorization (X-API-Key header)|
