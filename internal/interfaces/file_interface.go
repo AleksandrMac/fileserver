@@ -8,7 +8,7 @@ import (
 )
 
 type FileRepo interface {
-	GetFilePath(relPath string) string
+	GetFilePath(relPath string) (string, error)
 	FileExists(path string) (bool, int64, error)
 	SaveFile(path string, data io.Reader) error
 	ListZipContents(zipPath string) ([]domain.FileInfo, error)
@@ -18,7 +18,7 @@ type FileRepo interface {
 }
 
 type FileUsecase interface {
-	GetFilePath(relPath string) string
+	GetFilePath(relPath string) (string, error)
 	FileExists(path string) (bool, int64, error)
 	SaveFile(path string, data io.Reader) error
 	ListZipContents(zipPath string) ([]domain.FileInfo, error)

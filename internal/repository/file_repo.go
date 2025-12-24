@@ -23,8 +23,8 @@ func NewFileRepository(storagePath string) *FileRepository {
 	return &FileRepository{storagePath: storagePath}
 }
 
-func (x *FileRepository) GetFilePath(relPath string) string {
-	return filepath.Join(x.storagePath, relPath)
+func (x *FileRepository) GetFilePath(relPath string) (string, error) {
+	return x.validateAndCleanPath(relPath)
 }
 
 func (x *FileRepository) FileExists(path string) (bool, int64, error) {
@@ -38,25 +38,23 @@ func (x *FileRepository) FileExists(path string) (bool, int64, error) {
 	return !info.IsDir(), info.Size(), nil
 }
 
-func (x *FileRepository) SaveFile(path string, data io.Reader) error {
-	// 1. валидируем имя файла и создаем абсолютный путь
-	fullPath, err := x.validateAndCleanPath(path)
-	if err != nil {
-		return err
+func (x *FileRepository) SaveFile(fullPath string, data io.Reader) error {
+	if !strings.HasPrefix(fullPath, x.storagePath) {
+		return errors.New("failed path, want absoulute path.")
 	}
 
-	// 2. создаем все директории в пути
+	// 1. создаем все директории в пути
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return err
 	}
 
-	// 3. создаем временный файл для записи
+	// 2. создаем временный файл для записи
 	tempFile, err := os.CreateTemp(filepath.Dir(fullPath), ".tmp_")
 	if err != nil {
 		return err
 	}
 
-	// 4. пишем данные во временный файл
+	// 3. пишем данные во временный файл
 	_, err = io.Copy(tempFile, data)
 	closeErr := tempFile.Close()
 	if err != nil || closeErr != nil {
@@ -67,7 +65,7 @@ func (x *FileRepository) SaveFile(path string, data io.Reader) error {
 		return err
 	}
 
-	// 5. Атомарно переименовываем (в Linux/Mac — это atomic)
+	// 4. Атомарно переименовываем (в Linux/Mac — это atomic)
 	return os.Rename(tempFile.Name(), fullPath)
 }
 
