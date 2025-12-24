@@ -2,9 +2,11 @@ package repository
 
 import (
 	"archive/zip"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/AleksandrMac/fileserver/internal/domain"
 )
@@ -14,6 +16,10 @@ type FileRepository struct {
 }
 
 func NewFileRepository(storagePath string) *FileRepository {
+	err := os.MkdirAll(storagePath, 0755)
+	if err != nil {
+		panic("failed create FileRepository: " + err.Error())
+	}
 	return &FileRepository{storagePath: storagePath}
 }
 
@@ -33,19 +39,36 @@ func (x *FileRepository) FileExists(path string) (bool, int64, error) {
 }
 
 func (x *FileRepository) SaveFile(path string, data io.Reader) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-
-	out, err := os.Create(path)
+	// 1. валидируем имя файла и создаем абсолютный путь
+	fullPath, err := x.validateAndCleanPath(path)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
 
-	_, err = io.Copy(out, data)
+	// 2. создаем все директории в пути
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		return err
+	}
 
-	return err
+	// 3. создаем временный файл для записи
+	tempFile, err := os.CreateTemp(filepath.Dir(fullPath), ".tmp_")
+	if err != nil {
+		return err
+	}
+
+	// 4. пишем данные во временный файл
+	_, err = io.Copy(tempFile, data)
+	closeErr := tempFile.Close()
+	if err != nil || closeErr != nil {
+		os.Remove(tempFile.Name())
+		if closeErr != nil {
+			return closeErr
+		}
+		return err
+	}
+
+	// 5. Атомарно переименовываем (в Linux/Mac — это atomic)
+	return os.Rename(tempFile.Name(), fullPath)
 }
 
 func (x *FileRepository) ListZipContents(zipPath string) ([]domain.FileInfo, error) {
@@ -99,4 +122,21 @@ func (x *FileRepository) GetFileSize(path string) (int64, error) {
 	}
 
 	return info.Size(), nil
+}
+
+func (x *FileRepository) validateAndCleanPath(path string) (string, error) {
+	// Нормализуем путь
+	cleanPath := filepath.Clean("/" + path)
+
+	if cleanPath == "\\" {
+		return "", errors.New("invalid path: path is empty")
+	}
+
+	// Запрещаем подъемы выше корня
+	if strings.Contains(cleanPath, "..\\") {
+		return "", errors.New("invalid path: contains '..'")
+	}
+
+	// возвращаем полный путь
+	return filepath.Join(x.storagePath, cleanPath), nil
 }
