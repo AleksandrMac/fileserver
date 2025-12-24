@@ -47,19 +47,25 @@ func main() {
 
 	// Health & Ready
 	r.Get("/health", handler.Health)
-	r.Get("/reade", handler.Ready)
+	r.Get("/ready", handler.Ready)
 
 	// Metrics
 	r.Handle("/metrics", promhttp.Handler())
 
-	r.Method("GET", "/*", http.HandlerFunc(handler.ServeFileGet))
-	r.Method("HEAD", "/*", http.HandlerFunc(handler.ServeFileGet))
-	r.Method("OPTIONS", "/*", http.HandlerFunc(handler.ServeFileOptions))
+	r.Get("/*", http.HandlerFunc(handler.ServeFileGet))
+	r.Head("/*", http.HandlerFunc(handler.ServeFileGet))
+	r.Options("/*", http.HandlerFunc(handler.ServeFileOptions))
 
-	// далее идут защиищенные функции
-	r.Use(handler.Auth)
-	// Upload
-	r.Post("/upload", handler.Upload)
+	r.Post("/upload", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
+	r.Head("/upload", http.HandlerFunc(handler.UploadHead))
+	r.Options("/upload", http.HandlerFunc(handler.UploadOptions))
+
+	// // далее идут защиищенные функции
+	// r.Group(func(r chi.Router) {
+	// 	r.Use(handler.Auth)
+	// 	// upload
+	// 	r.Post("/upload", http.HandlerFunc(handler.Upload))
+	// })
 
 	// Server
 	addr := ":" + port

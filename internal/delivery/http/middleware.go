@@ -27,12 +27,11 @@ func (h *Handler) Metrics(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 		duration := time.Since(start)
 
-		labels := []string{
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", strconv.Itoa(ww.statusCode),
-		}
-		metrics.RequesCount.WithLabelValues(labels...).Inc()
+		metrics.RequesCount.WithLabelValues(
+			r.Method,
+			r.URL.Path,
+			strconv.Itoa(ww.statusCode),
+		).Inc()
 
 		log.Info().
 			Str("method", r.Method).

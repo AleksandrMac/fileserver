@@ -12,6 +12,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+func (h *Handler) ServeFileOptions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Allow", "GET, HEAD, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+	w.Header().Set("X-API-Param-meta", "For ZIP files: ?meta=true → returns JSON metadata (name, mod_time)")
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *Handler) ServeFileGet(w http.ResponseWriter, r *http.Request) {
 	relPath := r.URL.Path
 	relPath = filepath.Clean("/" + relPath)
@@ -34,16 +42,22 @@ func (h *Handler) ServeFileGet(w http.ResponseWriter, r *http.Request) {
 
 	isZip := strings.HasSuffix(strings.ToLower(fullPath), ".zip")
 	head := r.Method == http.MethodHead
+	meta := r.URL.Query().Get("meta") == "true"
 
-	if head && isZip {
+	if meta && isZip {
+		w.Header().Set("Content-Type", "application/json")
+		if head {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		
 		files, err := h.usecase.ListZipContents(fullPath)
 		if err != nil {
 			log.Error().Err(err).Str("path", fullPath).Msg("failed to read zip")
 			http.Error(w, "Internal error", http.StatusInternalServerError)
 			return
-		}
+		}	
 
-		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(files); err != nil {
 			log.Error().Err(err).Msg("failed to encode archive metadata")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)

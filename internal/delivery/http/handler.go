@@ -43,13 +43,6 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func (h *Handler) ServeFileOptions(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Allow", "GET, HEAD, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
-	w.WriteHeader(http.StatusOK)
-}
-
 type responseWriterWrapper struct {
 	http.ResponseWriter
 	statusCode int

@@ -61,3 +61,25 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	log.Info().Str("path", relPath).Int64("size", newSize).Msg("file uploaded")
 }
+
+// UploadOptions обрабатывает CORS preflight для /upload
+func (h *Handler) UploadOptions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Allow", "POST, OPTIONS, HEAD")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, HEAD")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+	w.Header().Set("Access-Control-Max-Age", "86400")
+
+	// Описание параметров через кастомные заголовки (для разработчиков)
+	w.Header().Set("X-API-Param-path", "Required. Relative file path for upload (e.g., ?path=docs/report.pdf). Must not contain '..' or absolute paths.")
+	w.Header().Set("X-API-Header-X-API-Key", "Required for POST. API key for authorization.")
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// UploadHead проверяет доступность эндпоинта /upload
+func (h *Handler) UploadHead(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Allow", "POST, OPTIONS, HEAD")
+	w.Header().Set("X-API-Param-path", "Required. Relative file path for upload (e.g., ?path=docs/report.pdf). Must not contain '..' or absolute paths.")
+	w.Header().Set("X-API-Header-X-API-Key", "Required for POST. API key for authorization.")
+	w.WriteHeader(http.StatusOK)
+}
