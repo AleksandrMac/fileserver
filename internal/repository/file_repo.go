@@ -2,9 +2,11 @@ package repository
 
 import (
 	"archive/zip"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/AleksandrMac/fileserver/internal/domain"
 )
@@ -14,6 +16,10 @@ type FileRepository struct {
 }
 
 func NewFileRepository(storagePath string) *FileRepository {
+	err := os.MkdirAll(storagePath, 0755)
+	if err != nil {
+		panic("failed create FileRepository: " + err.Error())
+	}
 	return &FileRepository{storagePath: storagePath}
 }
 
@@ -33,11 +39,16 @@ func (x *FileRepository) FileExists(path string) (bool, int64, error) {
 }
 
 func (x *FileRepository) SaveFile(path string, data io.Reader) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	fullPath, err := x.validateAndCleanPath(path)
+	if err != nil {
 		return err
 	}
 
-	out, err := os.Create(path)
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		return err
+	}
+
+	out, err := os.Create(fullPath)
 	if err != nil {
 		return err
 	}
@@ -99,4 +110,21 @@ func (x *FileRepository) GetFileSize(path string) (int64, error) {
 	}
 
 	return info.Size(), nil
+}
+
+func (x *FileRepository) validateAndCleanPath(path string) (string, error) {
+	// Нормализуем путь
+	cleanPath := filepath.Clean("/" + path)
+
+	if cleanPath == "\\" {
+		return "", errors.New("invalid path: path is empty")
+	}
+
+	// Запрещаем подъемы выше корня
+	if strings.Contains(cleanPath, "..\\") {
+		return "", errors.New("invalid path: contains '..'")
+	}
+
+	// возвращаем полный путь
+	return filepath.Join(x.storagePath, cleanPath), nil
 }
