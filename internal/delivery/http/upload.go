@@ -29,7 +29,12 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullPath := h.usecase.GetFilePath(relPath[1:])
+	fullPath, err := h.usecase.GetFilePath(relPath[1:])
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
 	exists, oldSize, _ := h.usecase.FileExists(fullPath)
 
 	// Save

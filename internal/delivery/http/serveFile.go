@@ -20,7 +20,12 @@ func (h *Handler) ServeFileGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullPath := h.usecase.GetFilePath(relPath[1:])
+	fullPath, err := h.usecase.GetFilePath(relPath[1:])
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
 	exists, _, err := h.usecase.FileExists(fullPath)
 	if err != nil || !exists {
 		http.NotFound(w, r)
