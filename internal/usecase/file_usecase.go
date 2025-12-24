@@ -15,7 +15,7 @@ func NewFileUseCase(fileRepo interfaces.FileRepo) *FileUsecase {
 	return &FileUsecase{fileRepo: fileRepo}
 }
 
-func (x *FileUsecase) GetFilePath(relPath string) string {
+func (x *FileUsecase) GetFilePath(relPath string) (string, error) {
 	return x.fileRepo.GetFilePath(relPath)
 }
 
