@@ -101,7 +101,7 @@ func TestValidateAndResolvePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &FileRepository{root}
+			repo := &FileRepository{storagePath: root}
 			got, err := repo.validateAndCleanPath(tt.userPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateAndCleanPath() error = %v, wantErr %v", err, tt.wantErr)

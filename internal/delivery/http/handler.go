@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/rs/zerolog/log"
@@ -10,24 +11,26 @@ import (
 )
 
 type Handler struct {
-	usecase     interfaces.FileUsecase
-	apiKey      string
-	storageSize int64
+	fileUC        interfaces.FileUsecase
+	infoServiceUC interfaces.InfoServiceInterface
+	apiKey        string
+	storageSize   int64
 }
 
-func NewHandler(usecase interfaces.FileUsecase, apiKey string) *Handler {
-	size, err := usecase.GetStorageSize()
+func NewHandler(usecase interfaces.FileUsecase, infoService interfaces.InfoServiceInterface, apiKey string) *Handler {
+	storage, err := usecase.GetStorageInfo()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to calculate initial storage size")
 	}
 
-	log.Info().Int64("bytes", size).Msg("initial storage size calculated")
-	metrics.TotalStorageSize.Set(float64(size))
+	log.Info().Int64("bytes", storage.TotalSize).Msg("initial storage size calculated")
+	metrics.TotalStorageSize.Set(float64(storage.TotalSize))
 
 	return &Handler{
-		usecase:     usecase,
-		apiKey:      apiKey,
-		storageSize: size,
+		fileUC:        usecase,
+		infoServiceUC: infoService,
+		apiKey:        apiKey,
+		storageSize:   storage.TotalSize,
 	}
 }
 
@@ -41,6 +44,15 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
+}
+
+func (x *Handler) Info(w http.ResponseWriter, r *http.Request) {
+	info := x.infoServiceUC.GetInfo()
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err := json.NewEncoder(w).Encode(info); err != nil {
+		log.Warn().Err(err).Msg("failed to encode info response")
+	}
 }
 
 type responseWriterWrapper struct {

@@ -31,8 +31,8 @@ func (x *FileUsecase) ListZipContents(zipPath string) ([]domain.FileInfo, error)
 	return x.fileRepo.ListZipContents(zipPath)
 }
 
-func (x *FileUsecase) GetStorageSize() (int64, error) {
-	return x.fileRepo.GetStorageSize()
+func (x *FileUsecase) GetStorageInfo() (*domain.StorageInfo, error) {
+	return x.fileRepo.GetStorageInfo()
 }
 
 func (x *FileUsecase) ReadFile(path string) (io.ReadCloser, error) {
