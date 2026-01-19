@@ -2,8 +2,6 @@ package http
 
 import (
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -43,39 +41,6 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
-}
-
-func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func (h *Handler) ServeFileOrMeta(w http.ResponseWriter, r *http.Request) {
-
-}
-
-// middleware
-
-func (h *Handler) Metrics(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		ww := &responseWriterWrapper{ResponseWriter: w, statusCode: http.StatusOK}
-		next.ServeHTTP(ww, r)
-		duration := time.Since(start)
-
-		labels := []string{
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", strconv.Itoa(ww.statusCode),
-		}
-		metrics.RequesCount.WithLabelValues(labels...).Inc()
-
-		log.Info().
-			Str("method", r.Method).
-			Str("path", r.URL.Path).
-			Int("status", ww.statusCode).
-			Dur("duration", duration).
-			Msg("request completed")
-	})
 }
 
 type responseWriterWrapper struct {

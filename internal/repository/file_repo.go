@@ -8,11 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/text/encoding/charmap"
+
 	"github.com/AleksandrMac/fileserver/internal/domain"
 )
 
 type FileRepository struct {
-	storagePath string
+	storagePath      string
+	fallbackEncoding *charmap.Charmap
 }
 
 func NewFileRepository(storagePath string) *FileRepository {
@@ -20,7 +23,14 @@ func NewFileRepository(storagePath string) *FileRepository {
 	if err != nil {
 		panic("failed create FileRepository: " + err.Error())
 	}
-	return &FileRepository{storagePath: storagePath}
+	path, err := filepath.Abs(storagePath)
+	if err != nil {
+		panic("failed get absolute path: " + err.Error())
+	}
+	return &FileRepository{
+		storagePath:      path,
+		fallbackEncoding: charmap.CodePage866,
+	}
 }
 
 func (x *FileRepository) GetFilePath(relPath string) (string, error) {
@@ -82,8 +92,20 @@ func (x *FileRepository) ListZipContents(zipPath string) ([]domain.FileInfo, err
 			continue
 		}
 
+		// --- Декодирование имени файла ---
+		filename := f.Name
+		if f.Flags&0x800 == 0 {
+			// Флаг UTF-8 НЕ установлен → предполагаем локальную кодировку
+			if decoded, err := decodeString(filename, x.fallbackEncoding); err == nil {
+				filename = decoded
+			} else {
+				// Если декодирование сломалось — оставляем как есть (лучше битое имя, чем падение)
+				// Можно логировать: log.Warn().Str("original", f.Name).Msg("failed to decode filename")
+			}
+		}
+
 		files = append(files, domain.FileInfo{
-			Name:    f.Name,
+			Name:    filename,
 			ModTime: f.Modified,
 		})
 	}
@@ -137,4 +159,14 @@ func (x *FileRepository) validateAndCleanPath(path string) (string, error) {
 
 	// возвращаем полный путь
 	return filepath.Join(x.storagePath, cleanPath), nil
+}
+
+// decodeString преобразует строку из заданной кодировки в UTF-8
+func decodeString(s string, enc *charmap.Charmap) (string, error) {
+	decoder := enc.NewDecoder()
+	decoded, err := decoder.String(s)
+	if err != nil {
+		return "", err
+	}
+	return decoded, nil
 }
