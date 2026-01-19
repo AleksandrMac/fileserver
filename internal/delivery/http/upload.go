@@ -29,22 +29,22 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullPath, err := h.usecase.GetFilePath(relPath[1:])
+	fullPath, err := h.fileUC.GetFilePath(relPath[1:])
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	exists, oldSize, _ := h.usecase.FileExists(fullPath)
+	exists, oldSize, _ := h.fileUC.FileExists(fullPath)
 
 	// Save
-	if err := h.usecase.SaveFile(fullPath, file); err != nil {
+	if err := h.fileUC.SaveFile(fullPath, file); err != nil {
 		log.Error().Err(err).Str("path", fullPath).Msg("upload failed")
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
-	newSize, _ := h.usecase.GetFileSize(fullPath)
+	newSize, _ := h.fileUC.GetFileSize(fullPath)
 
 	var delta int64
 

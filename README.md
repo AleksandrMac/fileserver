@@ -120,10 +120,25 @@ Returns JSON array:
 [
   {
     "name": "file.txt",
-    "mod_time": "2024-12-01T10:00:00Z",
-    "sha256": "a1b2c3..."
+    "mod_time": "2024-12-01T10:00:00Z"
   }
 ]
+```
+`GET /info`
+
+Returns JSON object:
+```
+{
+  "version": "dev",
+  "commit": "local",
+  "build_time": "local",
+  "port": "8080",
+  "storage": {
+    "path": "/storage",
+    "total_files": 1,
+    "total_size_bytes": 53125503
+  }
+}
 ```
 
 `GET /health`

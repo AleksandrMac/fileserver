@@ -113,22 +113,30 @@ func (x *FileRepository) ListZipContents(zipPath string) ([]domain.FileInfo, err
 	return files, nil
 }
 
-func (x *FileRepository) GetStorageSize() (int64, error) {
-	var total int64
+func (x *FileRepository) GetStorageInfo() (*domain.StorageInfo, error) {
+	totalFiles := int64(0)
+	totalSize := int64(0)
 
-	err := filepath.Walk(x.storagePath, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(x.storagePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if !info.IsDir() {
-			total += info.Size()
+			totalFiles++
+			totalSize += info.Size()
 		}
 
 		return nil
-	})
+	}); err != nil {
+		return &domain.StorageInfo{Path: x.storagePath}, err
+	}
 
-	return total, err
+	return &domain.StorageInfo{
+		Path:       x.storagePath,
+		TotalFiles: totalFiles,
+		TotalSize:  totalSize,
+	}, nil
 }
 
 func (x *FileRepository) ReadFile(path string) (*os.File, error) {

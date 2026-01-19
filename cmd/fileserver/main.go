@@ -19,6 +19,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Эти переменные заполняются при сборке через -ldflags
+var (
+	version   string // например: "v1.2.0" или "dev"
+	commit    string // хеш коммита
+	buildTime string // ISO8601 время
+)
+
 func main() {
 	// Logging
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
@@ -35,8 +42,9 @@ func main() {
 
 	// Init
 	repo := repository.NewFileRepository(storagePath)
-	uc := usecase.NewFileUseCase(repo)
-	handler := custhttp.NewHandler(uc, apiKey)
+	fileUC := usecase.NewFileUseCase(repo)
+	infoUC := usecase.NewInfoService(version, commit, buildTime, port, repo)
+	handler := custhttp.NewHandler(fileUC, infoUC, apiKey)
 
 	// Router
 	r := chi.NewRouter()
@@ -48,17 +56,18 @@ func main() {
 	// Health & Ready
 	r.Get("/health", handler.Health)
 	r.Get("/ready", handler.Ready)
+	r.Get("/info", handler.Info)
 
 	// Metrics
 	r.Handle("/metrics", promhttp.Handler())
 
-	r.Get("/*", http.HandlerFunc(handler.ServeFileGet))
-	r.Head("/*", http.HandlerFunc(handler.ServeFileGet))
-	r.Options("/*", http.HandlerFunc(handler.ServeFileOptions))
+	r.Get("/*", handler.ServeFileGet)
+	r.Head("/*", handler.ServeFileGet)
+	r.Options("/*", handler.ServeFileOptions)
 
 	r.Post("/upload", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
-	r.Head("/upload", http.HandlerFunc(handler.UploadHead))
-	r.Options("/upload", http.HandlerFunc(handler.UploadOptions))
+	r.Head("/upload", handler.UploadHead)
+	r.Options("/upload", handler.UploadOptions)
 
 	// // далее идут защиищенные функции
 	// r.Group(func(r chi.Router) {

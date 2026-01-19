@@ -28,13 +28,13 @@ func (h *Handler) ServeFileGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullPath, err := h.usecase.GetFilePath(relPath[1:])
+	fullPath, err := h.fileUC.GetFilePath(relPath[1:])
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	exists, _, err := h.usecase.FileExists(fullPath)
+	exists, _, err := h.fileUC.FileExists(fullPath)
 	if err != nil || !exists {
 		http.NotFound(w, r)
 		return
@@ -51,7 +51,7 @@ func (h *Handler) ServeFileGet(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		
-		files, err := h.usecase.ListZipContents(fullPath)
+		files, err := h.fileUC.ListZipContents(fullPath)
 		if err != nil {
 			log.Error().Err(err).Str("path", fullPath).Msg("failed to read zip")
 			http.Error(w, "Internal error", http.StatusInternalServerError)
@@ -65,7 +65,7 @@ func (h *Handler) ServeFileGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	size, _ := h.usecase.GetFileSize(fullPath)
+	size, _ := h.fileUC.GetFileSize(fullPath)
 	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	w.Header().Set("Content-Type", "application/octet-stream")
 
@@ -74,7 +74,7 @@ func (h *Handler) ServeFileGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, err := h.usecase.ReadFile(fullPath)
+	file, err := h.fileUC.ReadFile(fullPath)
 	if err != nil {
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
