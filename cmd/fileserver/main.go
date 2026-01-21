@@ -61,9 +61,9 @@ func main() {
 	// Metrics
 	r.Handle("/metrics", promhttp.Handler())
 
-	r.Get("/*", handler.ServeFileGet)
-	r.Head("/*", handler.ServeFileGet)
-	r.Options("/*", handler.ServeFileOptions)
+	r.Get("/d*", handler.ServeFile)
+	r.Head("/d*", handler.ServeFile)
+	r.Options("/d*", handler.ServeFileOptions)
 
 	r.Post("/upload", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
 	r.Head("/upload", handler.UploadHead)

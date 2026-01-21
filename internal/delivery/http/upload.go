@@ -29,13 +29,18 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullPath, err := h.fileUC.GetFilePath(relPath[1:])
+	fullPath, err := h.fileUC.GetFullPath(relPath[1:])
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	exists, oldSize, _ := h.fileUC.FileExists(fullPath)
+	info, err := h.fileUC.FileInfo(fullPath)
+	if err != nil {
+		log.Error().Err(err).Str("path", fullPath).Msg("get info failed")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
 
 	// Save
 	if err := h.fileUC.SaveFile(fullPath, file); err != nil {
@@ -48,8 +53,8 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	var delta int64
 
-	if exists {
-		delta = newSize - oldSize
+	if info != nil {
+		delta = newSize - info.Size()
 	} else {
 		delta = newSize
 	}

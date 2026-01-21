@@ -72,25 +72,8 @@ func TestValidateAndResolvePath(t *testing.T) {
 			wantErr:  false,
 			wantPath: "\\safe\\storage\\secret",
 		},
-		{
-			name:     "trailing dots",
-			userPath: "folder/..",
-			wantErr:  true,
-		},
-
-		// Ошибки: пустые пути
-		{
-			name:     "empty user path",
-			userPath: "",
-			wantErr:  true,
-		},
 
 		// Пограничные случаи
-		{
-			name:     "single dot",
-			userPath: ".",
-			wantErr:  true, // filepath.Clean("/") → "/", но мы запрещаем пустой относительный путь
-		},
 		{
 			name:     "double slash",
 			userPath: "//docs//file.txt",

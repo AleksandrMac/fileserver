@@ -120,7 +120,9 @@ Returns JSON array:
 [
   {
     "name": "file.txt",
-    "mod_time": "2024-12-01T10:00:00Z"
+    "mod_time": "2024-12-01T10:00:00Z",
+    "path": "/d/file.txt",
+    "is_dir": true
   }
 ]
 ```

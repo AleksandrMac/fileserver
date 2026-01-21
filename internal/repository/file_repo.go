@@ -33,19 +33,19 @@ func NewFileRepository(storagePath string) *FileRepository {
 	}
 }
 
-func (x *FileRepository) GetFilePath(relPath string) (string, error) {
+func (x *FileRepository) GetFullPath(relPath string) (string, error) {
 	return x.validateAndCleanPath(relPath)
 }
 
-func (x *FileRepository) FileExists(path string) (bool, int64, error) {
-	info, err := os.Stat(path)
+// FileInfo возвращает информацию о файле по адресу path.
+// если ошибка или его нет возвращается nil
+func (x *FileRepository) FileInfo(path string) (info os.FileInfo, err error) {
+	info, err = os.Stat(path)
 	if os.IsNotExist(err) {
-		return false, 0, nil
+		return nil, nil
 	}
-	if err != nil {
-		return false, 0, err
-	}
-	return !info.IsDir(), info.Size(), nil
+
+	return info, nil
 }
 
 func (x *FileRepository) SaveFile(fullPath string, data io.Reader) error {
@@ -79,6 +79,29 @@ func (x *FileRepository) SaveFile(fullPath string, data io.Reader) error {
 	return os.Rename(tempFile.Name(), fullPath)
 }
 
+func (x *FileRepository) List(path string) ([]domain.FileInfo, error) {
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.FileInfo, 0, len(files))
+	for _, f := range files {
+		fi, err := f.Info()
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, domain.FileInfo{
+			Name:    f.Name(),
+			ModTime: fi.ModTime(),
+			IsDir:   f.IsDir(),
+			Path:    strings.TrimPrefix(filepath.Join(path, f.Name()), x.storagePath),
+		})
+	}
+
+	return result, nil
+}
+
 func (x *FileRepository) ListZipContents(zipPath string) ([]domain.FileInfo, error) {
 	zipReader, err := zip.OpenReader(zipPath)
 	if err != nil {
@@ -107,6 +130,7 @@ func (x *FileRepository) ListZipContents(zipPath string) ([]domain.FileInfo, err
 		files = append(files, domain.FileInfo{
 			Name:    filename,
 			ModTime: f.Modified,
+			IsDir:   f.FileInfo().IsDir(),
 		})
 	}
 
@@ -155,10 +179,6 @@ func (x *FileRepository) GetFileSize(path string) (int64, error) {
 func (x *FileRepository) validateAndCleanPath(path string) (string, error) {
 	// Нормализуем путь
 	cleanPath := filepath.Clean("/" + path)
-
-	if cleanPath == "\\" {
-		return "", errors.New("invalid path: path is empty")
-	}
 
 	// Запрещаем подъемы выше корня
 	if strings.Contains(cleanPath, "..\\") {

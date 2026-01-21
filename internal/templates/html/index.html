@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ONLYOFFICE Документы</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .user-select {
+      margin: 15px 0;
+      padding: 10px;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    button, a { display: inline-block; margin: 5px 10px 5px 0; padding: 8px 16px; }
+    ul { margin-top: 20px; }
+    li { margin: 0px 0; }
+    a { margin: 0;}
+    .file-actions {
+      margin: 0px 15px 0px 15px;
+    }
+    .file-name {
+      margin-right: 15px;
+      font-weight: 10;
+    }
+    .file-actions button {
+      border: none;
+      cursor: pointer;
+      font-size: 1.1em;
+      padding: 4px;
+      margin: 0px;
+      border-radius: 4px;
+    }
+    .file-actions button:hover {
+      background-color: #f0f0f0;
+}
+  </style>
+</head>
+<body>
+  <h2>Выберите пользователя</h2>
+  <div class="user-select">
+    <label><input type="radio" name="user" value="1" onchange="saveUser()"> АН</label>
+    <label><input type="radio" name="user" value="2" onchange="saveUser()"> НН</label>
+    <label><input type="radio" name="user" value="3" onchange="saveUser()"> АА</label>
+  </div>
+
+  <h2>Создать новый документ</h2>
+  <a href="#" onclick="createDoc('text')"><button>📄 Текст</button></a>
+  <a href="#" onclick="createDoc('spreadsheet')"><button>📊 Таблица</button></a>
+  <a href="#" onclick="createDoc('presentation')"><button>📽️ Презентация</button></a>
+
+  <h2>Существующие документы</h2>
+  <table>
+    {{if and (ne .Dir "/") (ne .Dir "")}}
+    <tr>
+      <td>⬆️</td>
+      <td><a href="#" onclick="goUp(); return false;">Назад '{{.Dir}}'</a></td>
+    </tr>
+    {{end}}
+
+    {{range .Files}}  
+    <tr>
+      <td>
+        {{if .IsDir}}📁
+        {{else}}
+          <!--Иконка по расширению -->
+          {{if or (hasSuffix .Name ".doc") (hasSuffix .Name ".docx")}} 📄
+          {{else if or (hasSuffix .Name ".xls") (hasSuffix .Name ".xlsx")}} 📊
+          {{else if hasSuffix .Name ".pdf"}} 📄
+          {{else if hasSuffix .Name ".zip"}} 🗜️
+          {{else if hasSuffix .Name ".txt"}} 📝
+          {{else}} 📎 <!-- Универсальный файл -->
+          {{end}}
+        {{end}}
+      </td>
+      <td><a href="{{.Path}}">{{.Name}}</a></td>
+      <td>
+        {{if .IsDir}}</a>
+        {{else}}
+          <span class="file-actions">          
+          <button type="button" onclick='previewFile("{{.Path}}")' title="Просмотр">👁️</button><!--
+            {{if or 
+              (or (hasSuffix .Name ".doc") (hasSuffix .Name ".docx"))
+              (or (hasSuffix .Name ".xls") (hasSuffix .Name ".xlsx"))
+            }}
+          --><button type="button" onclick='editDoc("{{.Path}}")' title="Редактировать" >✏️</button><!--
+            {{end}}
+            
+          --><button type="button" onclick='downloadFile("{{.Path}}")' title="Скачать">📥</button><!--
+          --><button type="button" onclick='showInfo("{{.Path}}")' title="Инфо">ℹ️</button>
+          </span>
+        {{end}}
+      </td>      
+      <td>{{formatTime .ModTime}}</td>
+    </tr>
+  {{end}}
+  </table>
+<script>
+  // Сохраняем объект {id, name}
+  const users = {
+    "1": "АН",
+    "2": "НН",
+    "3": "АА"
+  };
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const saved = localStorage.getItem("onlyofficeUserId");
+    if (saved && users[saved]) {
+      document.querySelector(`input[name="user"][value="${saved}"]`).checked = true;
+    } else {
+      // По умолчанию — АН (id=1)
+      document.querySelector('input[name="user"][value="1"]').checked = true;
+    }
+  });
+
+  function saveUser() {
+    const selected = document.querySelector('input[name="user"]:checked');
+    if (selected) {
+      localStorage.setItem("onlyofficeUserId", selected.value);
+    }
+  }
+
+  function getUserId() {
+    return localStorage.getItem("onlyofficeUserId") || "1";
+  }
+
+  function getUserName() {
+    const id = getUserId();
+    return users[id] || "АН";
+  }
+
+  function createDoc(type) {
+    const userId = getUserId();
+    const username = getUserName()
+    window.location.href = `/create?type=${type}&userId=${userId}&username=${username}`;
+  }
+
+  function previewFile(path) {
+    const previewUrl = `/preview?path=${encodeURIComponent(path)}`;
+    window.open(previewUrl, '_blank');
+  }
+
+  function editDoc(filename) {
+    const userId = getUserId();
+    const username = getUserName()
+    const editUrl = `/edit?file=${encodeURIComponent(filename)}&userId=${userId}&username=${username}`;
+    window.open(editUrl, '_blank');
+  }
+
+  // Скачивание файла
+  function downloadFile(path) {
+    // Просто переходим по ссылке — браузер скачает файл
+    window.location.href = path;
+  }
+
+  // Показ информации о файле
+  function showInfo(path) {
+    fetch(`/info?path=${encodeURIComponent(path)}`)
+      .then(res => res.json())
+      .then(data => {
+        let info = `Файл: ${data.name}\n`;
+        info += `Размер: ${data.size} байт\n`;
+        info += `Изменён: ${data.mod_time}\n`;
+        info += `Хеш: ${data.sha256 || '—'}\n`;
+        alert(info);
+      })
+      .catch(err => {
+        alert('Не удалось загрузить информацию');
+        console.error(err);
+      });
+  }
+  /**
+ * Возвращает текущий путь из адресной строки (без начального / и без query/hash)
+ * Примеры:
+ *   /docs/2024/       → "docs/2024/"
+ *   /docs/report.pdf  → "docs/"
+ *   /                 → ""
+ */
+function getCurrentPath() {
+    const path = window.location.pathname;
+    // Убираем начальный / и нормализуем: убираем файл, оставляем только директорию
+    let clean = path.startsWith('/') ? path.slice(1) : path;
+    if (clean === '') return '';
+
+    return clean;
+}
+
+/**
+ * Возвращает путь на уровень вверх
+ * Примеры:
+ *   "docs/2024/" → "docs/"
+ *   "docs/"      → ""
+ *   ""           → null (корень)
+ */
+function getParentPath() {
+    const current = getCurrentPath();
+    if (!current) return null; // уже в корне
+
+    // Удаляем завершающий /
+    let trimmed = current.endsWith('/') ? current.slice(0, -1) : current;
+    // Удаляем последний сегмент
+    const lastSlash = trimmed.lastIndexOf('/');
+    if (lastSlash === -1) {
+        return ''; // был один сегмент, например "docs/" → ""
+    }
+    return trimmed.substring(0, lastSlash);
+}
+
+/**
+ * Переход на уровень вверх
+ */
+function goUp() {
+    const parent = getParentPath();
+    if (parent === "/d") {
+        console.warn('Already at root');
+        return;
+    }
+    // Формируем URL: / + parent (если parent пустой — будет /)
+    const url = '/' + parent;
+    window.location.href = url;
+}
+</script>
+</body>
+</html>
