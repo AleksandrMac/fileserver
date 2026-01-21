@@ -62,19 +62,9 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	r.Get("/d*", handler.ServeFile)
+	r.Post("/d*", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
 	r.Head("/d*", handler.ServeFile)
 	r.Options("/d*", handler.ServeFileOptions)
-
-	r.Post("/upload", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
-	r.Head("/upload", handler.UploadHead)
-	r.Options("/upload", handler.UploadOptions)
-
-	// // далее идут защиищенные функции
-	// r.Group(func(r chi.Router) {
-	// 	r.Use(handler.Auth)
-	// 	// upload
-	// 	r.Post("/upload", http.HandlerFunc(handler.Upload))
-	// })
 
 	// Server
 	addr := ":" + port
