@@ -95,7 +95,7 @@ func (x *FileRepository) List(path string) ([]domain.FileInfo, error) {
 			Name:    f.Name(),
 			ModTime: fi.ModTime(),
 			IsDir:   f.IsDir(),
-			Path:    strings.TrimPrefix(filepath.Join(path, f.Name()), x.storagePath),
+			Path:    strings.Replace(strings.TrimPrefix(filepath.Join(path, f.Name()), x.storagePath), "\\", "/", -1),
 		})
 	}
 
