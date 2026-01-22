@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 	custhttp "github.com/AleksandrMac/fileserver/internal/delivery/http"
 	"github.com/AleksandrMac/fileserver/internal/repository"
 	"github.com/AleksandrMac/fileserver/internal/usecase"
+	editor_usecase "github.com/AleksandrMac/fileserver/internal/usecase/editor"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/go-chi/chi/v5"
@@ -31,20 +33,36 @@ func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
 
+	// default value
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+
 	// Config
 	storagePath := getEnv("STORAGE_PATH", "./storage")
 	apiKey := getEnv("API_KEY", "")
 	port := getEnv("PORT", "8080")
+	hostname = getEnv("HOST", hostname)
+	jwtSecret := getEnv("DOCUMENT_SERVER_SECRET", "")
+	docServerUrl := getEnv("DOCUMENT_SERVER_URL", "")
 
 	if apiKey == "" {
 		log.Fatal().Msg("API_KEY is required")
+	}
+	if jwtSecret == "" {
+		log.Fatal().Msg("DOCUMENT_SERVER_SECRET is required")
+	}
+	if docServerUrl == "" {
+		log.Fatal().Msg("DOCUMENT_SERVER_URL is required")
 	}
 
 	// Init
 	repo := repository.NewFileRepository(storagePath)
 	fileUC := usecase.NewFileUseCase(repo)
 	infoUC := usecase.NewInfoService(version, commit, buildTime, port, repo)
-	handler := custhttp.NewHandler(fileUC, infoUC, apiKey)
+	editorUC := editor_usecase.NewEditorUsecase(jwtSecret, docServerUrl, fmt.Sprintf("http://%s:%s", hostname, port))
+	handler := custhttp.NewHandler(fileUC, infoUC, editorUC, apiKey)
 
 	// Router
 	r := chi.NewRouter()
@@ -61,20 +79,13 @@ func main() {
 	// Metrics
 	r.Handle("/metrics", promhttp.Handler())
 
-	r.Get("/*", handler.ServeFileGet)
-	r.Head("/*", handler.ServeFileGet)
-	r.Options("/*", handler.ServeFileOptions)
+	r.Get("/d*", handler.ServeFile)
+	r.Post("/d*", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
+	r.Head("/d*", handler.ServeFile)
+	r.Options("/d*", handler.ServeFileOptions)
 
-	r.Post("/upload", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
-	r.Head("/upload", handler.UploadHead)
-	r.Options("/upload", handler.UploadOptions)
-
-	// // далее идут защиищенные функции
-	// r.Group(func(r chi.Router) {
-	// 	r.Use(handler.Auth)
-	// 	// upload
-	// 	r.Post("/upload", http.HandlerFunc(handler.Upload))
-	// })
+	r.Get("/edit", handler.Edit)
+	r.Post("/track", handler.Track)
 
 	// Server
 	addr := ":" + port

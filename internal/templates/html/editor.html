@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ONLYOFFICE</title>
+  <style>
+    body { margin: 0; width: 100vw; height: 100vh; }
+    iframe { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+	<div id="editor"></div>
+	<script src="{{.DocServer}}/web-apps/apps/api/documents/api.js"></script>
+	<script>
+	new DocsAPI.DocEditor("editor", {
+		token: "{{.EditorToken}}",
+
+		document: {
+			title: "{{.FileName}}",
+			url: "{{.DownloadUrl}}",
+			fileType: "{{.FileType}}",
+			key: "{{.DocKey}}",
+			permissions: {
+				modifyFilter: false
+			},
+		},
+		documentType: "{{.DocType}}",
+		editorConfig: {
+			lang: "ru",
+			mode: "edit",
+			user: { id: "{{.UserId}}", name: "{{.UserName}}" },
+			callbackUrl: "{{.CallbackUrl}}"
+		}
+	});
+	</script>
+</body>
+</html>

@@ -10,6 +10,33 @@ import (
 )
 
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
+	filename := r.URL.Query().Get("filename")
+	if filename == "" {
+		http.Error(w, "Missing 'filename' query param", http.StatusBadRequest)
+		return
+	}
+
+	relPath := r.URL.Path
+	fullPath, err := h.fileUC.GetFullPath(relPath)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	storeInfo, err := h.fileUC.FileInfo(fullPath)
+	if storeInfo == nil {
+		if err != nil {
+			log.Warn().Err(err).Str("path", fullPath).Msg("failed to read info")
+		}
+		http.NotFound(w, r)
+		return
+	}
+
+	if !storeInfo.IsDir() {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -17,39 +44,34 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	relPath := r.URL.Query().Get("path")
-	if relPath == "" {
-		http.Error(w, "Missing 'path' query param", http.StatusBadRequest)
-		return
-	}
-
-	relPath = filepath.Clean("/" + relPath)
-	if strings.Contains(relPath, "..") {
+	filename = filepath.Clean("/" + filename)
+	if strings.Contains(filename, "..") {
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
 	}
 
-	fullPath, err := h.fileUC.GetFilePath(relPath[1:])
+	fullFileName := filepath.Join(fullPath, filename)
+
+	oldFileInfo, err := h.fileUC.FileInfo(fullFileName)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		log.Error().Err(err).Str("path", fullPath).Msg("get info failed")
+		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
-	exists, oldSize, _ := h.fileUC.FileExists(fullPath)
-
 	// Save
-	if err := h.fileUC.SaveFile(fullPath, file); err != nil {
+	if err := h.fileUC.SaveFile(fullFileName, file); err != nil {
 		log.Error().Err(err).Str("path", fullPath).Msg("upload failed")
 		http.Error(w, "Internal error", http.StatusInternalServerError)
 		return
 	}
 
-	newSize, _ := h.fileUC.GetFileSize(fullPath)
+	newSize, _ := h.fileUC.GetFileSize(fullFileName)
 
 	var delta int64
 
-	if exists {
-		delta = newSize - oldSize
+	if oldFileInfo != nil {
+		delta = newSize - oldFileInfo.Size()
 	} else {
 		delta = newSize
 	}
@@ -59,7 +81,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	metrics.BytesUploaded.Add(float64(newSize))
 
 	w.WriteHeader(http.StatusCreated)
-	log.Info().Str("path", relPath).Int64("size", newSize).Msg("file uploaded")
+	log.Info().Str("path", filename).Int64("size", newSize).Msg("file uploaded")
 }
 
 // UploadOptions обрабатывает CORS preflight для /upload
