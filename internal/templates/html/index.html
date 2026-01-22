@@ -54,7 +54,7 @@
     {{if and (ne .Dir "/") (ne .Dir "")}}
     <tr>
       <td>⬆️</td>
-      <td><a href="#" onclick="goUp(); return false;">Назад '{{.Dir}}'</a></td>
+      <td><a href="#" onclick="goUp(); return false;">Назад</a></td>
     </tr>
     {{end}}
 
@@ -73,7 +73,7 @@
           {{end}}
         {{end}}
       </td>
-      <td><a href="{{.Path}}">{{.Name}} '{{.Path}}'</a></td>
+      <td><a href="{{.Path}}">{{.Name}}</a></td>
       <td>
         {{if .IsDir}}</a>
         {{else}}

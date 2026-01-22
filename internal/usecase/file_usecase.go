@@ -13,7 +13,9 @@ type FileUsecase struct {
 }
 
 func NewFileUseCase(fileRepo interfaces.FileRepo) *FileUsecase {
-	return &FileUsecase{fileRepo: fileRepo}
+	return &FileUsecase{
+		fileRepo: fileRepo,
+	}
 }
 
 func (x *FileUsecase) GetFullPath(relPath string) (string, error) {

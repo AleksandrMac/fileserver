@@ -83,7 +83,7 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request) {
 					ParseFS(templates.HTML, "html/index.html")).
 				Execute(w, map[string]any{
 					"Files": files,
-					"Dir":   strings.TrimPrefix(relPath, "/d"),
+					"Dir":   strings.TrimPrefix(relPath, h.urlPrefix),
 				})
 		}
 		if err != nil {

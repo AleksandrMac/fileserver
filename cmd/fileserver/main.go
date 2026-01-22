@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -46,6 +48,10 @@ func main() {
 	hostname = getEnv("HOST", hostname)
 	jwtSecret := getEnv("DOCUMENT_SERVER_SECRET", "")
 	docServerUrl := getEnv("DOCUMENT_SERVER_URL", "")
+	storageUrlPath := storagePathUrl()
+	if err := os.MkdirAll(filepath.Join(storagePath, storageUrlPath), 0755); err != nil {
+		log.Fatal().Msg("can't make storage")
+	}
 
 	if apiKey == "" {
 		log.Fatal().Msg("API_KEY is required")
@@ -62,7 +68,7 @@ func main() {
 	fileUC := usecase.NewFileUseCase(repo)
 	infoUC := usecase.NewInfoService(version, commit, buildTime, port, repo)
 	editorUC := editor_usecase.NewEditorUsecase(jwtSecret, docServerUrl, fmt.Sprintf("http://%s:%s", hostname, port))
-	handler := custhttp.NewHandler(fileUC, infoUC, editorUC, apiKey)
+	handler := custhttp.NewHandler(fileUC, infoUC, editorUC, apiKey, storageUrlPath)
 
 	// Router
 	r := chi.NewRouter()
@@ -79,10 +85,10 @@ func main() {
 	// Metrics
 	r.Handle("/metrics", promhttp.Handler())
 
-	r.Get("/d*", handler.ServeFile)
-	r.Post("/d*", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
-	r.Head("/d*", handler.ServeFile)
-	r.Options("/d*", handler.ServeFileOptions)
+	r.Get(storageUrlPath+"*", handler.ServeFile)
+	r.Post(storageUrlPath+"*", handler.Auth(http.HandlerFunc(handler.Upload)).ServeHTTP)
+	r.Head(storageUrlPath+"*", handler.ServeFile)
+	r.Options(storageUrlPath+"*", handler.ServeFileOptions)
 
 	r.Get("/edit", handler.Edit)
 	r.Post("/track", handler.Track)
@@ -127,4 +133,10 @@ func getEnv(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+func storagePathUrl() string {
+	path := getEnv("STORAGE_PATH_URL", "/")
+	path, _ = url.JoinPath("/", path)
+	return path
 }
