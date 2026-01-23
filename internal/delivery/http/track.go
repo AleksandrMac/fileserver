@@ -12,26 +12,29 @@ import (
 )
 
 func (x *Handler) Track(w http.ResponseWriter, r *http.Request) {
-
 	// 1. Проверяем JWT из заголовка Authorization
 	authHeader := r.Header.Get("Authorization")
 	if !strings.HasPrefix(authHeader, "Bearer ") {
+		log.Debug().Str("Authorization", authHeader).Msg("missing or invalid authorization header")
 		http.Error(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
 		return
 	}
 	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
 	if !x.editorUC.VerifyEditorToken(tokenStr) {
+		log.Debug().Str("token", tokenStr).Msg("invalid jwt token")
 		http.Error(w, "Invalid JWT token", http.StatusUnauthorized)
 		return
 	}
 
 	payload := domain.EditorCallback{}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		log.Debug().Err(err).Msg("failed parse payload")
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 	if err := payload.Validate(); err != nil {
+		log.Debug().Err(err).Msg("failed validate payload")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -40,18 +43,20 @@ func (x *Handler) Track(w http.ResponseWriter, r *http.Request) {
 	if payload.Status == 2 || payload.Status == 3 {
 		filename, err := base64.URLEncoding.DecodeString(payload.Key)
 		if err != nil {
-			log.Error().Err(err).Msg("failed decode key")
+			log.Debug().Err(err).Msg("failed decode key")
 			http.Error(w, "failed decode key", http.StatusBadRequest)
 			return
 		}
 
 		if payload.Url == "" {
+			log.Debug().Err(err).Msg("missing url tag")
 			http.Error(w, "missing url tag", http.StatusBadRequest)
 			return
 		}
 
 		fullFilename, err := x.fileUC.GetFullPath(string(filename))
 		if err != nil {
+			log.Error().Err(err).Str("file", string(filename)).Msg("failed get full path")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -59,12 +64,14 @@ func (x *Handler) Track(w http.ResponseWriter, r *http.Request) {
 		// 6. Скачиваем обновлённый документ от Document Server
 		resp, err := http.Get(payload.Url)
 		if err != nil {
+			log.Error().Err(err).Str("url", payload.Url).Msg("failed to download updated document")
 			http.Error(w, "Failed to download updated document", http.StatusInternalServerError)
 			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
+			log.Error().Err(err).Str("url", payload.Url).Msg(fmt.Sprintf("Download failed: %s", resp.Status))
 			http.Error(w, fmt.Sprintf("Download failed: %s", resp.Status), http.StatusInternalServerError)
 			return
 		}
@@ -72,6 +79,7 @@ func (x *Handler) Track(w http.ResponseWriter, r *http.Request) {
 		// 7. Сохраняем поверх существующего файла
 		err = x.fileUC.SaveFile(fullFilename, resp.Body)
 		if err != nil {
+			log.Error().Err(err).Str("file", fullFilename).Msg("failed to write document")
 			http.Error(w, "Failed to write document", http.StatusInternalServerError)
 			return
 		}
