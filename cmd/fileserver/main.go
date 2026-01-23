@@ -93,7 +93,7 @@ func main() {
 	r.Options(storageUrlPath+"*", handler.ServeFileOptions)
 
 	r.Get("/edit", handler.Edit)
-	r.Post("/track", handler.Track)
+	r.Post("/track", handler.Auth(http.HandlerFunc(handler.Track)).ServeHTTP)
 
 	// Server
 	addr := ":" + port
