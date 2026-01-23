@@ -10,10 +10,10 @@ type InfoService struct {
 	commit    string
 	buildTime string
 	port      string
-	storage   interfaces.StorageInfo
+	storage   interfaces.StorageInfoIface
 }
 
-func NewInfoService(version, commit, buildTime, port string, storage interfaces.StorageInfo) *InfoService {
+func NewInfoService(version, commit, buildTime, port string, storage interfaces.StorageInfoIface) *InfoService {
 	return &InfoService{
 		version:   version,
 		commit:    commit,

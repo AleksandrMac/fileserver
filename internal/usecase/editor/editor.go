@@ -9,10 +9,11 @@ import (
 type EditorUsecase struct {
 	jwtSecret    string
 	docServerUrl string
+	docServerUrlInternal string
 	baseUrl      string
 }
 
-func NewEditorUsecase(jwtSecret, docServerUrl, baseUrl string) *EditorUsecase {
+func NewEditorUsecase(jwtSecret, docServerUrl, docServerUrlInternal, baseUrl string) *EditorUsecase {
 	return &EditorUsecase{
 		jwtSecret:    jwtSecret,
 		docServerUrl: docServerUrl,

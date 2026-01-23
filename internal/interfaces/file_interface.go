@@ -7,13 +7,13 @@ import (
 	"github.com/AleksandrMac/fileserver/internal/domain"
 )
 
-type StorageInfo interface {
+type StorageInfoIface interface {
 	// GetStorageInfo возвращает информацию о хранилище
 	GetStorageInfo() (*domain.StorageInfo, error)
 }
 
 type FileRepo interface {
-	StorageInfo
+	StorageInfoIface
 	GetFullPath(relPath string) (string, error)
 	FileInfo(path string) (os.FileInfo, error)
 	SaveFile(path string, data io.Reader) error
@@ -24,7 +24,7 @@ type FileRepo interface {
 }
 
 type FileUsecase interface {
-	StorageInfo
+	StorageInfoIface
 	GetFullPath(relPath string) (string, error)
 	FileInfo(path string) (os.FileInfo, error)
 	SaveFile(path string, data io.Reader) error

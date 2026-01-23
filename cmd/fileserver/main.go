@@ -48,6 +48,7 @@ func main() {
 	hostname = getEnv("HOST", hostname)
 	jwtSecret := getEnv("DOCUMENT_SERVER_SECRET", "")
 	docServerUrl := getEnv("DOCUMENT_SERVER_URL", "")
+	docServerUrlInternal := getEnv("DOCUMENT_SERVER_URL", "")
 	storageUrlPath := storagePathUrl()
 	if err := os.MkdirAll(filepath.Join(storagePath, storageUrlPath), 0755); err != nil {
 		log.Fatal().Msg("can't make storage")
@@ -67,8 +68,9 @@ func main() {
 	repo := repository.NewFileRepository(storagePath)
 	fileUC := usecase.NewFileUseCase(repo)
 	infoUC := usecase.NewInfoService(version, commit, buildTime, port, repo)
-	editorUC := editor_usecase.NewEditorUsecase(jwtSecret, docServerUrl, fmt.Sprintf("http://%s:%s", hostname, port))
-	handler := custhttp.NewHandler(fileUC, infoUC, editorUC, apiKey, storageUrlPath)
+	editorUC := editor_usecase.NewEditorUsecase(jwtSecret, docServerUrl, docServerUrlInternal, fmt.Sprintf("http://%s:%s", hostname, port))
+	trackUC := usecase.NewTrackUC(repo, docServerUrl, docServerUrlInternal)
+	handler := custhttp.NewHandler(fileUC, infoUC, editorUC, trackUC, apiKey, storageUrlPath)
 
 	// Router
 	r := chi.NewRouter()

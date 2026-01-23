@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AleksandrMac/fileserver/internal/metrics"
@@ -11,12 +12,23 @@ import (
 
 func (h *Handler) Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := r.Header.Get("X-API-Key")
-		if key != h.apiKey {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
+		checkList := []func() bool{
+			func() bool { return r.Header.Get("X-API-Key") == h.apiKey },
+			func() bool {
+				t := r.Header.Get("Authorization")
+				return strings.HasPrefix(t, "Bearer ") &&
+					h.editorUC.VerifyEditorToken(strings.TrimPrefix(t, "Bearer "))
+			},
 		}
-		next.ServeHTTP(w, r)
+
+		for _, f := range checkList {
+			if f() {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		http.Error(w, "Forbidden", http.StatusForbidden)
 	})
 }
 

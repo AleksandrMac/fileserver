@@ -14,12 +14,21 @@ type Handler struct {
 	fileUC        interfaces.FileUsecase
 	infoServiceUC interfaces.InfoServiceInterface
 	editorUC      interfaces.EditorUsecase
+	trackUC       interfaces.TrackUsecase
 	apiKey        string
 	storageSize   int64
 	urlPrefix     string
 }
 
-func NewHandler(usecase interfaces.FileUsecase, infoService interfaces.InfoServiceInterface, editor interfaces.EditorUsecase, apiKey, urlPrefix string) *Handler {
+func NewHandler(
+	usecase interfaces.FileUsecase,
+	infoService interfaces.InfoServiceInterface,
+	editor interfaces.EditorUsecase,
+	track interfaces.TrackUsecase,
+	apiKey,
+	urlPrefix string,
+) *Handler {
+
 	storage, err := usecase.GetStorageInfo()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to calculate initial storage size")
@@ -35,6 +44,7 @@ func NewHandler(usecase interfaces.FileUsecase, infoService interfaces.InfoServi
 		apiKey:        apiKey,
 		storageSize:   storage.TotalSize,
 		urlPrefix:     urlPrefix,
+		trackUC:       track,
 	}
 }
 
