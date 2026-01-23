@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
+	"net/url"
 
 	. "github.com/AleksandrMac/fileserver/internal/domain"
 	"github.com/AleksandrMac/fileserver/internal/interfaces"
@@ -75,16 +75,13 @@ func (x *TrackUC) Proceed(data *TrackRequest) (_ *TrackResponse, err uerror.UErr
 		}
 
 		// 6. Скачиваем обновлённый документ от Document Server
-		url := x.docServerUrl
-		if x.docServerUrlInternal != "" {
-			url = x.docServerUrlInternal + strings.TrimLeft(data.Url, x.docServerUrl)
-		}
+		uri := x.updateUri(data.Url)
 
-		resp, err := http.Get(url)
+		resp, err := http.Get(uri)
 		if err != nil {
 			return nil, uerror.NewUError(
 				http.StatusInternalServerError, "failed download updated doocument", err, map[string]any{
-					"url": url,
+					"url": uri,
 				},
 			)
 		}
@@ -93,7 +90,7 @@ func (x *TrackUC) Proceed(data *TrackRequest) (_ *TrackResponse, err uerror.UErr
 		if resp.StatusCode != http.StatusOK {
 			return nil, uerror.NewUError(http.StatusInternalServerError,
 				"download failed", errors.New("download failed"), map[string]any{
-					"url":    url,
+					"url":    uri,
 					"status": resp.Status,
 				},
 			)
@@ -120,4 +117,16 @@ func (x *TrackUC) WriteResponse(w http.ResponseWriter, data *TrackResponse, form
 
 	_, err := w.Write([]byte("unsupported format"))
 	return err
+}
+
+func (x *TrackUC) updateUri(uri string) string {
+	if x.docServerUrl == "" {
+		return uri
+	}
+
+	u, _ := url.Parse(uri)
+	u.Scheme = "http"
+	u.Host = x.docServerUrlInternal
+
+	return u.String()
 }
