@@ -5,6 +5,8 @@ export
 MODULE_NAME := $(shell go list -m 2>/dev/null | cut -d' ' -f1)
 REPO_NAME := $(shell echo "$(MODULE_NAME)" | sed 's/^[^.]*\.[^/]*\///' | tr '[:upper:]' '[:lower:]')
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT := $(shell git rev-parse HEAD)
+BUILDTIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 IMAGE_NAME  := cr.yandex/crp6lfi6ljf2nfcptsgo/$(REPO_NAME)
 
 # HELP =================================================================================================================
@@ -17,8 +19,12 @@ help: ## Display this help screen
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 docker-build: ## Собрать Docker-образ
-	@echo "Building $(IMAGE_NAME):$(VERSION)"
-	docker build -t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest .
+	@echo "Building $(IMAGE_NAME):$(VERSION):$(COMMIT):$(BUILDTIME)"
+	docker build \
+	--build-arg VERSION="$(VERSION)" \
+	--build-arg COMMIT="$(COMMIT)" \
+	--build-arg BUILDTIME="$(BUILDTIME)" \
+	-t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest .
 .PHONY: docker-build
 
 docker-push: docker-build ## Запушить образ в Yandex CR
