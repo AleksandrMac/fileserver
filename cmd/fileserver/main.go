@@ -48,7 +48,7 @@ func main() {
 	hostname = getEnv("HOST", hostname)
 	jwtSecret := getEnv("DOCUMENT_SERVER_SECRET", "")
 	docServerUrl := getEnv("DOCUMENT_SERVER_URL", "")
-	docServerUrlInternal := getEnv("DOCUMENT_SERVER_URL", "")
+	docServerUrlInternal := getEnv("DOCUMENT_SERVER_URL_INTERNAL", "")
 	storageUrlPath := storagePathUrl()
 	if err := os.MkdirAll(filepath.Join(storagePath, storageUrlPath), 0755); err != nil {
 		log.Fatal().Msg("can't make storage")
