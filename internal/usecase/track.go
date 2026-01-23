@@ -77,7 +77,7 @@ func (x *TrackUC) Proceed(data *TrackRequest) (_ *TrackResponse, err uerror.UErr
 		// 6. Скачиваем обновлённый документ от Document Server
 		url := x.docServerUrl
 		if x.docServerUrlInternal != "" {
-			url = x.docServerUrlInternal + strings.TrimRight(data.Url, x.docServerUrl)
+			url = x.docServerUrlInternal + strings.TrimLeft(data.Url, x.docServerUrl)
 		}
 
 		resp, err := http.Get(url)
